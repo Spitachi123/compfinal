@@ -957,6 +957,53 @@ body::before{content:'';position:fixed;inset:0;z-index:1000;pointer-events:none;
           <button class="save-btn" onclick="saveHomeData()">💾 SAVE HOME PAGE</button>
           <div class="sync-msg" id="home-sync-msg"></div>
         </div>
+        <!-- ══════════════════════════════════
+     API KEY MANAGER
+══════════════════════════════════ -->
+<div class="prop-section" style="margin-top:32px">
+  <div class="prop-section-title">🔑 API Key Manager</div>
+  <p style="font-family:var(--fm);font-size:8px;color:var(--muted);line-height:1.8;margin-bottom:14px">
+    Store your Firebase config here for easy access. Click <span style="color:var(--cyan)">COPY</span> to copy it to clipboard.
+  </p>
+
+  <!-- Paste Area -->
+  <div class="prop-group">
+    <div class="prop-label">Paste Your Firebase Config / API Key</div>
+    <textarea id="apikey-input" class="prop-textarea" style="min-height:120px;font-family:var(--fm);font-size:9px;color:var(--green);letter-spacing:.3px" placeholder='{
+  "apiKey": "AIza...",
+  "authDomain": "your-app.firebaseapp.com",
+  "databaseURL": "https://your-app-default-rtdb.firebaseio.com",
+  "projectId": "your-app",
+  "storageBucket": "your-app.appspot.com",
+  "messagingSenderId": "123456",
+  "appId": "1:123:web:abc"
+}'></textarea>
+  </div>
+
+  <!-- Buttons Row -->
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px">
+    <button onclick="apikeyLoad()" style="padding:10px 6px;background:transparent;border:1px solid var(--cyan);color:var(--cyan);font-family:var(--fm);font-size:8px;letter-spacing:1px;cursor:pointer;transition:all .2s" onmouseover="this.style.background='var(--cyan)';this.style.color='var(--bg)'" onmouseout="this.style.background='transparent';this.style.color='var(--cyan)'">
+      📥 LOAD SAVED
+    </button>
+    <button onclick="apikeyCopy()" style="padding:10px 6px;background:transparent;border:1px solid var(--green);color:var(--green);font-family:var(--fm);font-size:8px;letter-spacing:1px;cursor:pointer;transition:all .2s" onmouseover="this.style.background='var(--green)';this.style.color='var(--bg)'" onmouseout="this.style.background='transparent';this.style.color='var(--green)'">
+      📋 COPY
+    </button>
+    <button onclick="apikeySave()" style="padding:10px 6px;background:var(--cyan);border:1px solid var(--cyan);color:var(--bg);font-family:var(--fm);font-size:8px;letter-spacing:1px;cursor:pointer;transition:all .2s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">
+      💾 SAVE
+    </button>
+  </div>
+
+  <!-- Status -->
+  <div id="apikey-msg" style="font-family:var(--fm);font-size:8px;color:var(--green);margin-top:8px;min-height:13px;letter-spacing:1px;text-align:center"></div>
+
+  <!-- Quick Copy Chips -->
+  <div style="margin-top:14px">
+    <div class="prop-label" style="margin-bottom:8px">Quick Copy — individual fields</div>
+    <div id="apikey-chips" style="display:flex;flex-wrap:wrap;gap:6px">
+      <span style="font-family:var(--fm);font-size:8px;color:var(--muted)">Save a config above to see individual fields here.</span>
+    </div>
+  </div>
+</div>
       </div>
     </div>
   </div><!-- end page-developer -->
@@ -2085,6 +2132,87 @@ function buildPropsHTML(s, idx){
   </div>`;
 }
 
+  // ============================================================
+// API KEY MANAGER
+// ============================================================
+function apikeySave(){
+  const raw = document.getElementById('apikey-input').value.trim();
+  const msg = document.getElementById('apikey-msg');
+  if(!raw){ msg.style.color='var(--red)'; msg.textContent='❌ Nothing to save.'; setTimeout(()=>msg.textContent='',2500); return; }
+  try {
+    // Accept with or without outer braces
+    const clean = raw.startsWith('{') ? raw : '{'+raw+'}';
+    const parsed = JSON.parse(clean);
+    localStorage.setItem('cx_apikey_store', JSON.stringify(parsed));
+    msg.style.color='var(--green)'; msg.textContent='✅ Config saved to this browser!';
+    renderApikeyChips(parsed);
+    setTimeout(()=>msg.textContent='',3000);
+  } catch(e){
+    msg.style.color='var(--red)'; msg.textContent='❌ Invalid JSON — check for typos.';
+    setTimeout(()=>msg.textContent='',3000);
+  }
+}
+
+function apikeyLoad(){
+  const saved = localStorage.getItem('cx_apikey_store');
+  const msg   = document.getElementById('apikey-msg');
+  if(!saved){ msg.style.color='var(--orange)'; msg.textContent='⚠ No saved config found.'; setTimeout(()=>msg.textContent='',2500); return; }
+  try {
+    const parsed = JSON.parse(saved);
+    document.getElementById('apikey-input').value = JSON.stringify(parsed, null, 2);
+    msg.style.color='var(--cyan)'; msg.textContent='📥 Loaded from browser storage.';
+    renderApikeyChips(parsed);
+    setTimeout(()=>msg.textContent='',2500);
+  } catch(e){
+    msg.style.color='var(--red)'; msg.textContent='❌ Stored data corrupted.';
+  }
+}
+
+function apikeyCopy(){
+  const val = document.getElementById('apikey-input').value.trim();
+  const msg = document.getElementById('apikey-msg');
+  if(!val){ msg.style.color='var(--red)'; msg.textContent='❌ Nothing to copy — paste your config first.'; setTimeout(()=>msg.textContent='',2500); return; }
+  navigator.clipboard.writeText(val).then(()=>{
+    msg.style.color='var(--green)'; msg.textContent='📋 Copied to clipboard!';
+    setTimeout(()=>msg.textContent='',2500);
+  }).catch(()=>{
+    // fallback
+    const ta = document.getElementById('apikey-input');
+    ta.select(); document.execCommand('copy');
+    msg.style.color='var(--green)'; msg.textContent='📋 Copied (fallback)!';
+    setTimeout(()=>msg.textContent='',2500);
+  });
+}
+
+function renderApikeyChips(obj){
+  const wrap = document.getElementById('apikey-chips'); if(!wrap) return;
+  const fields = ['apiKey','authDomain','databaseURL','projectId','storageBucket','messagingSenderId','appId'];
+  wrap.innerHTML = fields.filter(k=>obj[k]).map(k=>`
+    <div onclick="chipCopy('${k}','${(obj[k]||'').replace(/'/g,"\\'")}')"
+      style="display:flex;align-items:center;gap:6px;padding:5px 10px;background:var(--panel);border:1px solid var(--border);cursor:pointer;transition:all .2s;font-family:var(--fm);font-size:7px;letter-spacing:1px"
+      onmouseover="this.style.borderColor='var(--cyan)';this.style.color='var(--cyan)'"
+      onmouseout="this.style.borderColor='var(--border)';this.style.color=''">
+      <span style="color:var(--muted)">${k}</span>
+      <span style="color:var(--white);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${obj[k]}</span>
+      <span style="color:var(--cyan);margin-left:2px">📋</span>
+    </div>`).join('');
+}
+
+function chipCopy(key, val){
+  navigator.clipboard.writeText(val).catch(()=>{});
+  const msg = document.getElementById('apikey-msg');
+  msg.style.color='var(--green)'; msg.textContent=`📋 Copied ${key}!`;
+  setTimeout(()=>msg.textContent='',2000);
+}
+
+// Auto-load chips on tab open
+const _origInitHomeEditor = initHomeEditor;
+initHomeEditor = function(){
+  _origInitHomeEditor();
+  const saved = localStorage.getItem('cx_apikey_store');
+  if(saved){ try{ renderApikeyChips(JSON.parse(saved)); }catch(e){} }
+};
+  
 function getLayoutHint(layout){
   const hints = {
     simple: 'Clean slide: large title + body paragraph.',
