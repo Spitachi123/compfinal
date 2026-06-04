@@ -1073,7 +1073,11 @@ function applyFbConfig() {
     const cfg = JSON.parse(raw.startsWith('{') ? raw : '{' + raw + '}');
     if (!cfg.databaseURL) { msg.textContent = '❌ Missing databaseURL — make sure you enabled Realtime Database'; msg.style.color='var(--red)'; return; }
     // Store config and reload
-    localStorage.setItem('cx_fb_config', JSON.stringify(cfg));
+   // In the module script at top:
+    localStorage.setItem('computex_fb_config', JSON.stringify(cfg));
+
+// In the IIFE below:
+    const saved = localStorage.getItem('computex_fb_config');
     msg.textContent = '✅ Config saved! Reloading...'; msg.style.color='var(--green)';
     setTimeout(() => location.reload(), 1200);
   } catch(e) {
@@ -1083,7 +1087,7 @@ function applyFbConfig() {
 
 // Load saved Firebase config from localStorage and inject before module runs
 (function() {
-  const saved = localStorage.getItem('cx_fb_config');
+  const saved = localStorage.getItem('computex_fb_config');
   if (saved) {
     try { window._CX_FIREBASE_CONFIG = JSON.parse(saved); } catch(e) {}
   }
@@ -2143,7 +2147,7 @@ function apikeySave(){
     // Accept with or without outer braces
     const clean = raw.startsWith('{') ? raw : '{'+raw+'}';
     const parsed = JSON.parse(clean);
-    localStorage.setItem('cx_apikey_store', JSON.stringify(parsed));
+    localStorage.setItem('computex_apikey_store', JSON.stringify(parsed));
     msg.style.color='var(--green)'; msg.textContent='✅ Config saved to this browser!';
     renderApikeyChips(parsed);
     setTimeout(()=>msg.textContent='',3000);
@@ -2154,7 +2158,7 @@ function apikeySave(){
 }
 
 function apikeyLoad(){
-  const saved = localStorage.getItem('cx_apikey_store');
+  const saved = localStorage.getItem('computex_apikey_store');
   const msg   = document.getElementById('apikey-msg');
   if(!saved){ msg.style.color='var(--orange)'; msg.textContent='⚠ No saved config found.'; setTimeout(()=>msg.textContent='',2500); return; }
   try {
@@ -2209,7 +2213,7 @@ function chipCopy(key, val){
 const _origInitHomeEditor = initHomeEditor;
 initHomeEditor = function(){
   _origInitHomeEditor();
-  const saved = localStorage.getItem('cx_apikey_store');
+  const saved = localStorage.getItem('computex_apikey_store');
   if(saved){ try{ renderApikeyChips(JSON.parse(saved)); }catch(e){} }
 };
   
