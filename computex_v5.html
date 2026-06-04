@@ -29,16 +29,7 @@ import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/fir
 let _savedCfg = null;
 try { _savedCfg = JSON.parse(localStorage.getItem('computex_fb_config')||'null'); } catch(e){}
 const FIREBASE_CONFIG = window._CX_FIREBASE_CONFIG || _savedCfg || null;
-// Example (replace with yours):
-// const FIREBASE_CONFIG = {
-//   apiKey: "AIza...",
-//   authDomain: "your-project.firebaseapp.com",
-//   databaseURL: "https://your-project-default-rtdb.firebaseio.com",
-//   projectId: "your-project",
-//   storageBucket: "your-project.appspot.com",
-//   messagingSenderId: "123456",
-//   appId: "1:123456:web:abc"
-// };
+
 
 window._FB_READY = false;
 window._FB_DB = null;
@@ -53,9 +44,10 @@ if (FIREBASE_CONFIG && FIREBASE_CONFIG.databaseURL) {
     const membersRef = ref(db, 'computex/members');
 
     // Listen for real-time changes from ANY computer
-    onValue(slidesRef, (snap) => {
-      if (snap.exists()) {
-        window.APP.slides = snap.val();
+onValue(slidesRef, (snap) => {
+  if (snap.exists()) {
+    const val = snap.val();
+    window.APP.slides = Array.isArray(val) ? val : Object.values(val);
         if (window._APP_READY) {
           window.renderSlideThumbs();
           window.initApp();
@@ -68,9 +60,10 @@ if (FIREBASE_CONFIG && FIREBASE_CONFIG.databaseURL) {
       }
     });
 
-    onValue(membersRef, (snap) => {
-      if (snap.exists()) {
-        window.APP.members = snap.val();
+onValue(membersRef, (snap) => {
+  if (snap.exists()) {
+    const val = snap.val();
+    window.APP.members = Array.isArray(val) ? val : Object.values(val);
         if (window._APP_READY && document.getElementById('page-members').classList.contains('active')) {
           window.renderMembers();
         }
@@ -1089,13 +1082,11 @@ function applyFbConfig() {
 }
 
 // Load saved Firebase config from localStorage and inject before module runs
-(function() {
-  const saved = localStorage.getItem('computex_fb_config');
-  if (saved) {
-    try { window._CX_FIREBASE_CONFIG = JSON.parse(saved); } catch(e) {}
-  }
-})();
-
+  // Must run BEFORE the module so _CX_FIREBASE_CONFIG is set in time
+  try {
+    const saved = localStorage.getItem('computex_fb_config');
+    if (saved) window._CX_FIREBASE_CONFIG = JSON.parse(saved);
+  } catch(e) {}
 // ============================================================
 // CURSOR
 // ============================================================
