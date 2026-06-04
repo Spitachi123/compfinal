@@ -47,18 +47,17 @@ if (FIREBASE_CONFIG && FIREBASE_CONFIG.databaseURL) {
 onValue(slidesRef, (snap) => {
   if (snap.exists()) {
     const val = snap.val();
-    window.APP.slides = Array.isArray(val) ? val : Object.values(val);
-        if (window._APP_READY) {
-          window.renderSlideThumbs();
-          window.initApp();
-          if (document.getElementById('page-developer').classList.contains('active')) {
-            window.devRenderList();
-            window.devPickSlide(typeof devSlIdx !== 'undefined' ? devSlIdx : 0);
-          }
-          window.syncMsg('🔄 Synced from Firebase');
-        }
-      }
-    });
+    const slides = Array.isArray(val) ? val : Object.values(val);
+    window.APP.slides = slides;
+    // Always update, regardless of _APP_READY
+    if (window.renderSlideThumbs) window.renderSlideThumbs();
+    if (window.initApp) window.initApp();
+    if (window.devRenderList) window.devRenderList();
+    if (window.devPickSlide) window.devPickSlide(window._getDevSlIdx());
+    window.syncMsg('🔄 Slides loaded from Firebase!');
+    console.log('✅ Firebase slides loaded:', slides.length, 'slides');
+  }
+});
 
 onValue(membersRef, (snap) => {
   if (snap.exists()) {
