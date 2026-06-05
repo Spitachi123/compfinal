@@ -30,47 +30,60 @@ let _savedCfg = null;
 try { _savedCfg = JSON.parse(localStorage.getItem('computex_fb_config')||'null'); } catch(e){}
 const FIREBASE_CONFIG = window._CX_FIREBASE_CONFIG || _savedCfg || null;
 
-
 window._FB_READY = false;
 window._FB_DB = null;
+// Which deck is active: 'deck1' or 'deck2'
+window._CX_DECK = localStorage.getItem('computex_active_deck') || 'deck1';
+
+// Helper: get Firebase path for current deck
+window._deckPath = (sub) => `computex/${window._CX_DECK}/${sub}`;
+
+let _slidesUnsub = null, _membersUnsub = null;
+
+function _attachListeners(db){
+  if(_slidesUnsub) _slidesUnsub();
+  if(_membersUnsub) _membersUnsub();
+
+  _slidesUnsub = onValue(ref(db, window._deckPath('slides')), (snap) => {
+    if (snap.exists()) {
+      const val = snap.val();
+      const slides = Array.isArray(val) ? val : Object.values(val);
+      window.APP.slides = slides;
+      if (window.renderSlideThumbs) window.renderSlideThumbs();
+      if (window.initApp) window.initApp();
+      if (window.devRenderList) window.devRenderList();
+      if (window.devPickSlide) window.devPickSlide(window._getDevSlIdx());
+      window.syncMsg('🔄 Slides loaded from Firebase!');
+    }
+  });
+
+  _membersUnsub = onValue(ref(db, window._deckPath('members')), (snap) => {
+    if (snap.exists()) {
+      const val = snap.val();
+      window.APP.members = Array.isArray(val) ? val : Object.values(val);
+      if (window._APP_READY && document.getElementById('page-members').classList.contains('active')) {
+        window.renderMembers();
+      }
+    }
+  });
+}
+
+// Allow switching decks at runtime
+window._switchDeck = (deck) => {
+  window._CX_DECK = deck;
+  localStorage.setItem('computex_active_deck', deck);
+  if (window._FB_DB) _attachListeners(window._FB_DB);
+  window.syncMsg('🎴 Switched to ' + (deck==='deck1'?'Deck 1':'Deck 2'));
+};
 
 if (FIREBASE_CONFIG && FIREBASE_CONFIG.databaseURL) {
   try {
     const app = initializeApp(FIREBASE_CONFIG);
     const db = getDatabase(app);
     window._FB_DB = db;
-
-    const slidesRef = ref(db, 'computex/slides');
-    const membersRef = ref(db, 'computex/members');
-
-    // Listen for real-time changes from ANY computer
-onValue(slidesRef, (snap) => {
-  if (snap.exists()) {
-    const val = snap.val();
-    const slides = Array.isArray(val) ? val : Object.values(val);
-    window.APP.slides = slides;
-    // Always update, regardless of _APP_READY
-    if (window.renderSlideThumbs) window.renderSlideThumbs();
-    if (window.initApp) window.initApp();
-    if (window.devRenderList) window.devRenderList();
-    if (window.devPickSlide) window.devPickSlide(window._getDevSlIdx());
-    window.syncMsg('🔄 Slides loaded from Firebase!');
-    console.log('✅ Firebase slides loaded:', slides.length, 'slides');
-  }
-});
-
-onValue(membersRef, (snap) => {
-  if (snap.exists()) {
-    const val = snap.val();
-    window.APP.members = Array.isArray(val) ? val : Object.values(val);
-        if (window._APP_READY && document.getElementById('page-members').classList.contains('active')) {
-          window.renderMembers();
-        }
-      }
-    });
-
+    _attachListeners(db);
     window._FB_READY = true;
-    console.log('✅ Firebase connected — real-time sync active');
+    console.log('✅ Firebase connected — real-time sync active, deck:', window._CX_DECK);
   } catch(e) {
     console.warn('Firebase init failed:', e.message);
   }
@@ -79,12 +92,12 @@ onValue(membersRef, (snap) => {
 // Expose save functions globally so non-module scripts can call them
 window._fbSaveSlides  = async () => {
   if (!window._FB_DB) return false;
-  await set(ref(window._FB_DB, 'computex/slides'),  window.APP.slides);
+  await set(ref(window._FB_DB, window._deckPath('slides')),  window.APP.slides);
   return true;
 };
 window._fbSaveMembers = async () => {
   if (!window._FB_DB) return false;
-  await set(ref(window._FB_DB, 'computex/members'), window.APP.members);
+  await set(ref(window._FB_DB, window._deckPath('members')), window.APP.members);
   return true;
 };
 </script>
@@ -1144,8 +1157,14 @@ function initApp() {
     const banner = document.getElementById('fb-banner');
     if (!banner) return;
     if (window._FB_READY) {
+      const d = window._CX_DECK;
       banner.classList.add('fb-ok');
-      banner.innerHTML = '🔥 Firebase connected — real-time sync active on all computers! <button onclick="document.getElementById(\'fb-banner\').classList.add(\'fb-hidden\')" style="margin-left:auto;background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.5);color:#fff;font-family:var(--fm);font-size:9px;padding:3px 10px;cursor:pointer;letter-spacing:1px">HIDE</button>';
+      banner.innerHTML = `🔥 Firebase connected — real-time sync active!
+        &nbsp;&nbsp;|&nbsp;&nbsp;
+        <span style="color:rgba(255,255,255,.7);font-size:9px">DECK:</span>
+        <button onclick="switchDeck('deck1')" id="deck1-btn" style="margin-left:6px;padding:3px 10px;font-family:var(--fm);font-size:9px;cursor:pointer;border:1px solid rgba(255,255,255,.5);background:${d==='deck1'?'rgba(255,255,255,.3)':'transparent'};color:#fff;letter-spacing:1px">DECK 1</button>
+        <button onclick="switchDeck('deck2')" id="deck2-btn" style="padding:3px 10px;font-family:var(--fm);font-size:9px;cursor:pointer;border:1px solid rgba(255,255,255,.5);background:${d==='deck2'?'rgba(255,255,255,.3)':'transparent'};color:#fff;letter-spacing:1px">DECK 2</button>
+        <button onclick="document.getElementById('fb-banner').classList.add('fb-hidden')" style="margin-left:auto;background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.5);color:#fff;font-family:var(--fm);font-size:9px;padding:3px 10px;cursor:pointer;letter-spacing:1px">HIDE</button>`;
     }
   }, 1500);
 
@@ -1494,6 +1513,30 @@ function buildSlideHTML(s){
     </div></div>`;
   }
 
+  // ─── CUSTOM CODE / HTML LAYOUT ───────────────────────────────
+  if(s.layout==='code'){
+    // Use a sandboxed iframe for full JS/CSS support; allow-scripts allow-same-origin needed for JS
+    const escaped = (s.body||'').replace(/`/g,'\\`');
+    const iframeId = 'code-iframe-'+s.id;
+    return `<div style="position:relative;width:100%;height:100%">
+      ${lbl}<h1 style="${titleStyle};margin-bottom:12px">${s.title}</h1>
+      <div style="position:relative;width:100%;height:calc(100% - 80px);min-height:320px">
+        <iframe id="${iframeId}" sandbox="allow-scripts allow-same-origin allow-forms allow-modals"
+          style="width:100%;height:100%;border:1px solid rgba(0,229,255,.2);background:#03070d;border-radius:2px;min-height:320px"
+          srcdoc=""></iframe>
+      </div>
+      <script>
+      (function(){
+        const f=document.getElementById('${iframeId}');
+        if(!f) return;
+        const html=\`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{margin:0;padding:0;box-sizing:border-box}body{background:#03070d;color:#a8c8d8;font-family:'Outfit',sans-serif;overflow:auto;padding:12px}</style></head><body>\${${JSON.stringify(s.body||'')}}<\/body><\/html>\`;
+        f.srcdoc=html;
+      })();
+      <\/script>
+      ${cimgHtml}${tbHtml}
+    </div>`;
+  }
+
   // ─── SIMPLE LAYOUT (default) ──────────────────────────────
   return `<div style="position:relative">${lbl}<h1 style="${titleStyle}">${s.title}</h1><p style="${bodyStyle}">${s.body}</p>${cimgHtml}${tbHtml}</div>`;
 }
@@ -1656,6 +1699,20 @@ function buildBodyEditorHTML(s){
   if(['simple','two-col','intro'].includes(layout)){
     return `<div class="prop-label">Content</div>
       <textarea class="prop-textarea" id="pi-bdy" style="min-height:88px" oninput="liveBody()">${eh(stripHtml(body))}</textarea>`;
+  }
+
+  // ── Custom Code / HTML ─────────────────────────────────────
+  if(layout==='code'){
+    return `<div class="prop-label" style="color:var(--green)">⌨ Custom HTML / JS Code</div>
+      <div style="font-family:var(--fm);font-size:8px;color:var(--muted);line-height:1.8;margin-bottom:6px">
+        Write any HTML, CSS, or JS. It renders live inside an <span style="color:var(--cyan)">iframe sandbox</span> — even complex apps work.
+      </div>
+      <textarea class="prop-textarea" id="pi-bdy" style="min-height:220px;font-family:var(--fm);font-size:10px;color:var(--green);letter-spacing:.3px;tab-size:2" spellcheck="false" oninput="liveBody()">${eh(body)}</textarea>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button onclick="codeInsertExample('counter')" style="flex:1;padding:5px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--fm);font-size:8px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--cyan)';this.style.color='var(--cyan)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">▸ Counter</button>
+        <button onclick="codeInsertExample('chart')" style="flex:1;padding:5px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--fm);font-size:8px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--cyan)';this.style.color='var(--cyan)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">▸ Chart</button>
+        <button onclick="codeInsertExample('clock')" style="flex:1;padding:5px;background:transparent;border:1px solid var(--border);color:var(--muted);font-family:var(--fm);font-size:8px;cursor:pointer;transition:all .2s" onmouseover="this.style.borderColor='var(--cyan)';this.style.color='var(--cyan)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--muted)'">▸ Clock</button>
+      </div>`
   }
 
   // ── Comparison & Difference → row/column grid ──────────────
@@ -2003,6 +2060,7 @@ function buildPropsHTML(s, idx){
           <option value="difference"${s.layout==='difference'?' selected':''}>Difference Table</option>
           <option value="stats"${s.layout==='stats'?' selected':''}>Stats / Metrics</option>
           <option value="timeline"${s.layout==='timeline'?' selected':''}>Timeline</option>
+          <option value="code"${s.layout==='code'?' selected':''}>⌨ Custom Code / HTML</option>
         </select>
         <div class="rp-hint" id="layout-hint-box" style="margin-top:6px">${getLayoutHint(s.layout||'simple')}</div>
       </div>
@@ -2630,14 +2688,21 @@ function liveImgPosition(){
 async function devSaveSlide(){
   const s=APP.slides[devSlIdx];
   s.label   = gv('pi-lbl');
-  s.title   = gv('pi-ttl');
-  s.body    = gv('pi-bdy');
-  s.layout  = gv('pi-lay');
-  s.titleSize  = parseInt(gv('pi-tsize'))||58;
-  s.titleColor = gv('pi-tcolor');
-  s.bodySize   = parseInt(gv('pi-bsize'))||16;
-  s.bodyColor  = gv('pi-bcolor');
-  s.imageInterval = parseInt(gv('pi-interval'))||4;
+  s.title   = gv('pi-ttl') || s.title;  // pi-ttl is always present
+  // Only overwrite body from textarea for layouts that use a plain textarea
+  // For structured layouts (comparison, difference, bullets, stats, timeline, content)
+  // the body is already mutated live via vtbl* functions — don't stomp it.
+  const textareaLayouts = ['simple','two-col','intro','code'];
+  if(textareaLayouts.includes(s.layout)){
+    const piBody = document.getElementById('pi-bdy');
+    if(piBody) s.body = piBody.value;
+  }
+  s.layout  = gv('pi-lay') || s.layout;
+  const tsize = parseInt(gv('pi-tsize')); if(tsize) s.titleSize = tsize;
+  const tcolor = gv('pi-tcolor'); if(tcolor) s.titleColor = tcolor;
+  const bsize = parseInt(gv('pi-bsize')); if(bsize) s.bodySize = bsize;
+  const bcolor = gv('pi-bcolor'); if(bcolor) s.bodyColor = bcolor;
+  const intv = parseInt(gv('pi-interval')); if(intv) s.imageInterval = intv;
   // textBoxes are already in APP.slides[devSlIdx].textBoxes (mutated live)
   devRenderList();
   renderSlideThumbs();
@@ -2673,6 +2738,58 @@ function devAddSlide(){
   devRenderList(); devPickSlide(devSlIdx);
   renderSlideThumbs(); initApp();
   syncMsg('✨ Slide added — click SAVE to download updated file');
+}
+
+function codeInsertExample(type){
+  const examples = {
+    counter: `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:280px;gap:24px">
+  <div id="n" style="font-size:120px;font-family:'Bebas Neue',sans-serif;color:#00e5ff;text-shadow:0 0 40px #00e5ff;line-height:1">0</div>
+  <div style="display:flex;gap:16px">
+    <button onclick="document.getElementById('n').textContent=+document.getElementById('n').textContent-1"
+      style="padding:14px 32px;background:transparent;border:2px solid #ff3b5c;color:#ff3b5c;font-size:28px;cursor:pointer;border-radius:4px">−</button>
+    <button onclick="document.getElementById('n').textContent=0"
+      style="padding:14px 24px;background:transparent;border:2px solid #3a6478;color:#3a6478;font-size:16px;cursor:pointer;border-radius:4px">RESET</button>
+    <button onclick="document.getElementById('n').textContent=+document.getElementById('n').textContent+1"
+      style="padding:14px 32px;background:transparent;border:2px solid #00ff88;color:#00ff88;font-size:28px;cursor:pointer;border-radius:4px">+</button>
+  </div>
+</div>`,
+    chart: `<canvas id="c" width="700" height="280"></canvas>
+<script>
+const ctx=document.getElementById('c').getContext('2d');
+const labels=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+const data=[65,72,58,81,76,90,68];
+const max=Math.max(...data);
+const w=700,h=260,pad=40,bw=60,gap=20;
+ctx.fillStyle='#03070d';ctx.fillRect(0,0,w,h+20);
+ctx.strokeStyle='rgba(0,229,255,.1)';
+for(let i=0;i<=4;i++){const y=pad+(h-pad*2)/4*i;ctx.beginPath();ctx.moveTo(pad,y);ctx.lineTo(w-20,y);ctx.stroke();}
+data.forEach((v,i)=>{
+  const x=pad+i*(bw+gap);const bh=(v/max)*(h-pad*2);const y=h-pad-bh;
+  const g=ctx.createLinearGradient(0,y,0,h-pad);g.addColorStop(0,'#00e5ff');g.addColorStop(1,'rgba(0,229,255,.1)');
+  ctx.fillStyle=g;ctx.fillRect(x,y,bw,bh);
+  ctx.fillStyle='#a8c8d8';ctx.font='12px Outfit';ctx.fillText(labels[i],x+bw/2-14,h-10);
+  ctx.fillStyle='#00e5ff';ctx.font='bold 13px Outfit';ctx.fillText(v,x+bw/2-10,y-6);
+});
+<\/script>`,
+    clock: `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:280px">
+  <div id="clk" style="font-size:90px;font-family:'Bebas Neue',sans-serif;color:#00e5ff;text-shadow:0 0 60px #00e5ff,0 0 120px rgba(0,229,255,.3);letter-spacing:6px;line-height:1"></div>
+  <div id="dt" style="font-family:monospace;font-size:14px;color:#3a6478;letter-spacing:3px;margin-top:12px"></div>
+</div>
+<script>
+function tick(){
+  const n=new Date();
+  document.getElementById('clk').textContent=[n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');
+  document.getElementById('dt').textContent=n.toDateString().toUpperCase();
+}
+tick();setInterval(tick,1000);
+<\/script>`
+  };
+  const ta = document.getElementById('pi-bdy');
+  if(ta && examples[type]){
+    ta.value = examples[type];
+    APP.slides[devSlIdx].body = examples[type];
+    liveBody();
+  }
 }
 
 function devExport(){
