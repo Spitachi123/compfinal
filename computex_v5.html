@@ -9,6 +9,17 @@ window.syncMsg = function(msg) {
 window._APP_READY = false;
 window._getDevSlIdx = function(){ return typeof window._devSlIdx !== 'undefined' ? window._devSlIdx : 0; };
 window._getPmIdx    = function(){ return typeof window._pmIdx    !== 'undefined' ? window._pmIdx    : 0; };
+
+// ── READ FIREBASE CONFIG & DECK BEFORE FIREBASE MODULE LOADS ──
+(function() {
+  try {
+    var saved = localStorage.getItem('computex_fb_config');
+    if (saved) { window._CX_FIREBASE_CONFIG = JSON.parse(saved); }
+  } catch(e) {}
+  try {
+    window._CX_DECK_PATH = localStorage.getItem('computex_active_deck') || 'computex_deck1';
+  } catch(e) { window._CX_DECK_PATH = 'computex_deck1'; }
+})();
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -51,10 +62,32 @@ if (FIREBASE_CONFIG && FIREBASE_CONFIG.databaseURL) {
       }
     });
     window._FB_READY = true;
-  } catch(e) { console.warn('Firebase init failed:', e.message); }
+  } catch(e) {
+    console.error('Firebase init failed:', e.message);
+    const b=document.getElementById('fb-banner');
+    if(b){ b.style.background='linear-gradient(90deg,#5a0000,#8a0000)'; b.innerHTML='❌ Firebase error: '+e.message+' — <a onclick="showFbSetup()" style="cursor:pointer">Re-enter config</a> <button onclick="this.parentElement.style.display=\'none\'" style="margin-left:auto;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-family:var(--fm);font-size:9px;padding:3px 10px;cursor:pointer">HIDE</button>'; }
+  }
 }
 window._fbSaveSlides  = async () => { if (!window._FB_DB) return false; await set(ref(window._FB_DB, DECK_PATH+'/slides'),  window.APP.slides); return true; };
 window._fbSaveMembers = async () => { if (!window._FB_DB) return false; await set(ref(window._FB_DB, DECK_PATH+'/members'), window.APP.members); return true; };
+
+// Manual fetch function for force-refresh
+window._fbFetchAll = async () => {
+  if (!window._FB_DB) return;
+  try {
+    const sSnap = await get(ref(window._FB_DB, DECK_PATH+'/slides'));
+    const mSnap = await get(ref(window._FB_DB, DECK_PATH+'/members'));
+    if (sSnap.exists()) {
+      window.APP.slides = sSnap.val();
+      window.renderSlideThumbs && window.renderSlideThumbs();
+      window.initApp && window.initApp();
+    }
+    if (mSnap.exists()) {
+      window.APP.members = mSnap.val();
+    }
+    window.syncMsg && window.syncMsg('🔄 Fetched from Firebase');
+  } catch(e) { console.error('Fetch error:', e); }
+};
 </script>
 
 <script id="cx-data" type="application/json">
@@ -959,6 +992,18 @@ window._APP_READY = false;
 function loadAppData() { return JSON.parse(document.getElementById('cx-data').textContent); }
 APP = window.APP = loadAppData();
 
+// ── FIREBASE RACE CONDITION FIX: if FB data arrived before APP was ready, re-fetch ──
+window._APP_READY = false; // will be set true after initApp()
+setTimeout(function() {
+  if (window._FB_DB && !window._APP_READY) return; // still loading
+  if (window._FB_DB && window._APP_READY) {
+    // Force re-read current values from Firebase in case onValue fired early
+    const {ref: fbRef, get: fbGet} = window._fbGetters || {};
+    // Already handled by onValue listeners — just ensure renders run
+    window.renderSlideThumbs && window.renderSlideThumbs();
+  }
+}, 2000);
+
 async function saveSlides() { if (window._fbSaveSlides) { const ok = await window._fbSaveSlides(); if (ok) return; } }
 async function saveMembers() { if (window._fbSaveMembers) { await window._fbSaveMembers(); } }
 
@@ -974,12 +1019,7 @@ function applyFbConfig() {
     setTimeout(()=>location.reload(), 1200);
   } catch(e) { msg.textContent='❌ Invalid JSON'; msg.style.color='var(--red)'; }
 }
-(function() {
-  const saved=localStorage.getItem('computex_fb_config');
-  if(saved){ try{ window._CX_FIREBASE_CONFIG=JSON.parse(saved); }catch(e){} }
-  const deck=localStorage.getItem('computex_active_deck')||'computex_deck1';
-  window._CX_DECK_PATH=deck;
-})();
+// [moved to head]
 
 // ============================================================ CURSOR ============================================================
 const curEl=document.getElementById('cur'), ringEl=document.getElementById('curRing');
@@ -1016,7 +1056,18 @@ function initApp() {
   window.devRenderList=devRenderList; window.devPickSlide=devPickSlide; window.syncMsg=syncMsg; window.initApp=initApp;
   setTimeout(()=>{
     const banner=document.getElementById('fb-banner'); if(!banner) return;
-    if(window._FB_READY){ banner.classList.add('fb-ok'); banner.innerHTML='🔥 Firebase connected — real-time sync active! <button onclick="document.getElementById(\'fb-banner\').classList.add(\'fb-hidden\')" style="margin-left:auto;background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.5);color:#fff;font-family:var(--fm);font-size:9px;padding:3px 10px;cursor:pointer;letter-spacing:1px">HIDE</button>'; }
+    // Poll briefly for async Firebase module to finish
+    let attempts = 0;
+    const checkFb = () => {
+      attempts++;
+      if(window._FB_READY){
+        banner.classList.add('fb-ok');
+        banner.innerHTML='⚡ Firebase connected — real-time sync active on <b>'+( (window._CX_DECK_PATH||'computex_deck1')==='computex_deck1'?'Deck 1':'Deck 2')+'</b>! <button onclick="document.getElementById(\'fb-banner\').classList.add(\'fb-hidden\')" style="margin-left:auto;background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.5);color:#fff;font-family:var(--fm);font-size:9px;padding:3px 10px;cursor:pointer;letter-spacing:1px">HIDE</button>';
+      } else if(window._CX_FIREBASE_CONFIG && attempts < 30) {
+        setTimeout(checkFb, 200);
+      }
+    };
+    checkFb();
   },1500);
   const hsub=document.getElementById('hero-sub-el'); if(hsub) hsub.textContent=APP.meta.heroSub||'';
   if(APP.meta && APP.meta.heroStyle){
