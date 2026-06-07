@@ -28,68 +28,89 @@ window._getPmIdx    = function(){ return typeof window._pmIdx    !== 'undefined'
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-// Deck 1 → computex/deck 1  (your real Firebase node name has a space)
+
+// ── DECK PATH: matches exact Firebase node names ──
+// Deck 1 → computex/deck 1
 // Deck 2 → computex/deck 2
-const _SELECTED_DECK = window._CX_DECK_PATH || 'computex/deck1';
-const DECK_PATH = _SELECTED_DECK === 'computex/deck1' ? 'computex/deck 1' : 'computex/deck 2';
-const FIREBASE_CONFIG = window._CX_FIREBASE_CONFIG || null;
+const _SEL = window._CX_DECK_PATH || 'computex/deck1';
+const DECK_PATH = _SEL === 'computex/deck1' ? 'computex/deck 1' : 'computex/deck 2';
+
 window._FB_READY = false;
-window._FB_DB = null;
+window._FB_DB    = null;
+
+const FIREBASE_CONFIG = window._CX_FIREBASE_CONFIG || null;
+
+// Helper: apply FB data and re-render everything
+function applyFBData(type, data) {
+  if (!data) return;
+  if (type === 'slides')  window.APP.slides  = data;
+  if (type === 'members') window.APP.members = data;
+  if (!window._APP_READY) return; // app not ready yet — data is stored, will render on initApp()
+  if (type === 'slides') {
+    window.renderSlideThumbs && window.renderSlideThumbs();
+    window.initApp && window.initApp();
+    const devPage = document.getElementById('page-developer');
+    if (devPage && devPage.classList.contains('active')) {
+      window.devRenderList && window.devRenderList();
+      window.devPickSlide && window.devPickSlide(window._getDevSlIdx());
+    }
+    window.syncMsg && window.syncMsg('⚡ Synced from Firebase');
+  }
+  if (type === 'members') {
+    const mPage = document.getElementById('page-members');
+    if (mPage && mPage.classList.contains('active')) {
+      window.renderMembers && window.renderMembers();
+    }
+  }
+}
+
 if (FIREBASE_CONFIG && FIREBASE_CONFIG.databaseURL) {
   try {
     const app = initializeApp(FIREBASE_CONFIG);
-    const db = getDatabase(app);
+    const db  = getDatabase(app);
     window._FB_DB = db;
-    const slidesRef = ref(db, DECK_PATH+'/slides');
-    const membersRef = ref(db, DECK_PATH+'/members');
-    onValue(slidesRef, (snap) => {
-      if (snap.exists()) {
-        window.APP.slides = snap.val();
-        if (window._APP_READY) {
-          window.renderSlideThumbs();
-          window.initApp();
-          if (document.getElementById('page-developer').classList.contains('active')) {
-            window.devRenderList();
-            window.devPickSlide(typeof devSlIdx !== 'undefined' ? devSlIdx : 0);
-          }
-          window.syncMsg('🔄 Synced from Firebase');
-        }
-      }
-    });
-    onValue(membersRef, (snap) => {
-      if (snap.exists()) {
-        window.APP.members = snap.val();
-        if (window._APP_READY && document.getElementById('page-members').classList.contains('active')) {
-          window.renderMembers();
-        }
-      }
-    });
+
+    // Listen for real-time changes
+    onValue(ref(db, DECK_PATH + '/slides'),  snap => applyFBData('slides',  snap.exists() ? snap.val() : null));
+    onValue(ref(db, DECK_PATH + '/members'), snap => applyFBData('members', snap.exists() ? snap.val() : null));
+
     window._FB_READY = true;
+    console.log('✅ Firebase connected. Reading from:', DECK_PATH);
   } catch(e) {
     console.error('Firebase init failed:', e.message);
-    const b=document.getElementById('fb-banner');
-    if(b){ b.style.background='linear-gradient(90deg,#5a0000,#8a0000)'; b.innerHTML='❌ Firebase error: '+e.message+' — <a onclick="showFbSetup()" style="cursor:pointer">Re-enter config</a> <button onclick="this.parentElement.style.display=\'none\'" style="margin-left:auto;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-family:var(--fm);font-size:9px;padding:3px 10px;cursor:pointer">HIDE</button>'; }
+    // Show error in banner once DOM is ready
+    const showErr = () => {
+      const b = document.getElementById('fb-banner');
+      if (!b) { setTimeout(showErr, 200); return; }
+      b.style.background = 'linear-gradient(90deg,#5a0000,#8a0000)';
+      b.innerHTML = '❌ Firebase error: ' + e.message + ' — <span onclick="showFbSetup()" style="cursor:pointer;text-decoration:underline">Re-enter config</span> <button onclick="this.parentElement.style.display='none'" style="margin-left:auto;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;font-family:var(--fm);font-size:9px;padding:3px 10px;cursor:pointer">HIDE</button>';
+    };
+    showErr();
   }
 }
-window._fbSaveSlides  = async () => { if (!window._FB_DB) return false; await set(ref(window._FB_DB, DECK_PATH+'/slides'),  window.APP.slides); return true; };
-window._fbSaveMembers = async () => { if (!window._FB_DB) return false; await set(ref(window._FB_DB, DECK_PATH+'/members'), window.APP.members); return true; };
 
-// Manual fetch function for force-refresh
+// Save helpers
+window._fbSaveSlides  = async () => {
+  if (!window._FB_DB) return false;
+  await set(ref(window._FB_DB, DECK_PATH + '/slides'),  window.APP.slides);
+  return true;
+};
+window._fbSaveMembers = async () => {
+  if (!window._FB_DB) return false;
+  await set(ref(window._FB_DB, DECK_PATH + '/members'), window.APP.members);
+  return true;
+};
+
+// Force re-fetch (call from console: _fbFetchAll())
 window._fbFetchAll = async () => {
-  if (!window._FB_DB) return;
-  try {
-    const sSnap = await get(ref(window._FB_DB, DECK_PATH+'/slides'));
-    const mSnap = await get(ref(window._FB_DB, DECK_PATH+'/members'));
-    if (sSnap.exists()) {
-      window.APP.slides = sSnap.val();
-      window.renderSlideThumbs && window.renderSlideThumbs();
-      window.initApp && window.initApp();
-    }
-    if (mSnap.exists()) {
-      window.APP.members = mSnap.val();
-    }
-    window.syncMsg && window.syncMsg('🔄 Fetched from Firebase');
-  } catch(e) { console.error('Fetch error:', e); }
+  if (!window._FB_DB) { console.warn('No Firebase connection'); return; }
+  const [sSnap, mSnap] = await Promise.all([
+    get(ref(window._FB_DB, DECK_PATH + '/slides')),
+    get(ref(window._FB_DB, DECK_PATH + '/members'))
+  ]);
+  applyFBData('slides',  sSnap.exists()  ? sSnap.val()  : null);
+  applyFBData('members', mSnap.exists() ? mSnap.val() : null);
+  console.log('✅ Force-fetched from', DECK_PATH);
 };
 </script>
 
@@ -995,18 +1016,6 @@ window._APP_READY = false;
 function loadAppData() { return JSON.parse(document.getElementById('cx-data').textContent); }
 APP = window.APP = loadAppData();
 
-// ── FIREBASE RACE CONDITION FIX: if FB data arrived before APP was ready, re-fetch ──
-window._APP_READY = false; // will be set true after initApp()
-setTimeout(function() {
-  if (window._FB_DB && !window._APP_READY) return; // still loading
-  if (window._FB_DB && window._APP_READY) {
-    // Force re-read current values from Firebase in case onValue fired early
-    const {ref: fbRef, get: fbGet} = window._fbGetters || {};
-    // Already handled by onValue listeners — just ensure renders run
-    window.renderSlideThumbs && window.renderSlideThumbs();
-  }
-}, 2000);
-
 async function saveSlides() { if (window._fbSaveSlides) { const ok = await window._fbSaveSlides(); if (ok) return; } }
 async function saveMembers() { if (window._fbSaveMembers) { await window._fbSaveMembers(); } }
 
@@ -1089,7 +1098,11 @@ function initApp() {
     const btn2=document.querySelector('.btn-sec'); if(btn2&&APP.meta.btn2Label) btn2.textContent=APP.meta.btn2Label;
   }
   renderSlideThumbs();
-  window._APP_READY=true;
+  window._APP_READY = true;
+  // If Firebase data arrived before we were ready, apply it now
+  if (window._FB_DB) {
+    window._fbFetchAll && window._fbFetchAll();
+  }
 }
 initApp();
 
