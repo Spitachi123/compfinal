@@ -17,8 +17,8 @@ window._getPmIdx    = function(){ return typeof window._pmIdx    !== 'undefined'
     if (saved) { window._CX_FIREBASE_CONFIG = JSON.parse(saved); }
   } catch(e) {}
   try {
-    window._CX_DECK_PATH = localStorage.getItem('computex_active_deck') || 'computex_deck1';
-  } catch(e) { window._CX_DECK_PATH = 'computex_deck1'; }
+    window._CX_DECK_PATH = localStorage.getItem('computex_active_deck') || 'computex/deck1';
+  } catch(e) { window._CX_DECK_PATH = 'computex/deck1'; }
 })();
 </script>
 <meta charset="UTF-8">
@@ -28,7 +28,10 @@ window._getPmIdx    = function(){ return typeof window._pmIdx    !== 'undefined'
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, onValue, set, get } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-const DECK_PATH = window._CX_DECK_PATH || 'computex_deck1';
+// Deck 1 → computex/deck 1  (your real Firebase node name has a space)
+// Deck 2 → computex/deck 2
+const _SELECTED_DECK = window._CX_DECK_PATH || 'computex/deck1';
+const DECK_PATH = _SELECTED_DECK === 'computex/deck1' ? 'computex/deck 1' : 'computex/deck 2';
 const FIREBASE_CONFIG = window._CX_FIREBASE_CONFIG || null;
 window._FB_READY = false;
 window._FB_DB = null;
@@ -684,15 +687,15 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
     <div style="font-family:var(--fh);font-size:18px;color:var(--gold);letter-spacing:4px;margin-bottom:6px;text-transform:uppercase">⬡ DECK SELECTOR</div>
     <p style="font-family:var(--fm);font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:24px;line-height:1.8">Choose which presentation deck to load. Both decks share the same Firebase config but store data independently.</p>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
-      <div id="deck-btn-1" onclick="selectDeck('computex_deck1')" style="padding:22px 16px;border:2px solid var(--border2);cursor:pointer;text-align:center;transition:all .2s;background:rgba(0,229,255,.03)" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="if(window._CX_DECK_PATH!=='computex_deck1')this.style.borderColor='var(--border2)'">
+      <div id="deck-btn-1" onclick="selectDeck('computex/deck1')" style="padding:22px 16px;border:2px solid var(--border2);cursor:pointer;text-align:center;transition:all .2s;background:rgba(0,229,255,.03)" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="if(window._CX_DECK_PATH!=='computex/deck1')this.style.borderColor='var(--border2)'">
         <div style="font-family:var(--fh);font-size:28px;color:var(--gold);margin-bottom:8px">D1</div>
         <div style="font-family:var(--fm);font-size:11px;color:var(--white);letter-spacing:2px;margin-bottom:4px">DECK 1</div>
-        <div style="font-family:var(--fm);font-size:8px;color:var(--muted);letter-spacing:1px">computex_deck1</div>
+        <div style="font-family:var(--fm);font-size:8px;color:var(--muted);letter-spacing:1px">computex/deck1</div>
       </div>
-      <div id="deck-btn-2" onclick="selectDeck('computex_deck2')" style="padding:22px 16px;border:2px solid var(--border2);cursor:pointer;text-align:center;transition:all .2s;background:rgba(0,229,255,.03)" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="if(window._CX_DECK_PATH!=='computex_deck2')this.style.borderColor='var(--border2)'">
+      <div id="deck-btn-2" onclick="selectDeck('computex/deck2')" style="padding:22px 16px;border:2px solid var(--border2);cursor:pointer;text-align:center;transition:all .2s;background:rgba(0,229,255,.03)" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="if(window._CX_DECK_PATH!=='computex/deck2')this.style.borderColor='var(--border2)'">
         <div style="font-family:var(--fh);font-size:28px;color:var(--gold);margin-bottom:8px">D2</div>
         <div style="font-family:var(--fm);font-size:11px;color:var(--white);letter-spacing:2px;margin-bottom:4px">DECK 2</div>
-        <div style="font-family:var(--fm);font-size:8px;color:var(--muted);letter-spacing:1px">computex_deck2</div>
+        <div style="font-family:var(--fm);font-size:8px;color:var(--muted);letter-spacing:1px">computex/deck2</div>
       </div>
     </div>
     <div style="font-family:var(--fm);font-size:8px;color:var(--muted);line-height:1.8;padding:10px;border:1px solid var(--border);background:rgba(0,229,255,.02)">
@@ -907,11 +910,11 @@ body::after{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
           <div class="prop-section-title">⬡ Deck Manager</div>
           <div class="info-note" style="margin-bottom:14px"><p>Switch between <span>Deck 1</span> and <span>Deck 2</span>. Each has its own independent slides and members stored in Firebase. Both use the same Firebase config.</p></div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-            <button onclick="selectDeck('computex_deck1')" style="padding:16px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-family:var(--fm);font-size:9px;letter-spacing:2px;cursor:pointer;transition:all .2s;text-align:center" id="dev-deck1-btn" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="if(window._CX_DECK_PATH!=='computex_deck1'){this.style.borderColor='var(--border2)';this.style.color='var(--muted)'}">
+            <button onclick="selectDeck('computex/deck1')" style="padding:16px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-family:var(--fm);font-size:9px;letter-spacing:2px;cursor:pointer;transition:all .2s;text-align:center" id="dev-deck1-btn" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="if(window._CX_DECK_PATH!=='computex/deck1'){this.style.borderColor='var(--border2)';this.style.color='var(--muted)'}">
               <div style="font-family:var(--fh);font-size:20px;color:var(--gold);margin-bottom:4px">D1</div>
               DECK 1
             </button>
-            <button onclick="selectDeck('computex_deck2')" style="padding:16px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-family:var(--fm);font-size:9px;letter-spacing:2px;cursor:pointer;transition:all .2s;text-align:center" id="dev-deck2-btn" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="if(window._CX_DECK_PATH!=='computex_deck2'){this.style.borderColor='var(--border2)';this.style.color='var(--muted)'}">
+            <button onclick="selectDeck('computex/deck2')" style="padding:16px;border:1px solid var(--border2);background:transparent;color:var(--muted);font-family:var(--fm);font-size:9px;letter-spacing:2px;cursor:pointer;transition:all .2s;text-align:center" id="dev-deck2-btn" onmouseover="this.style.borderColor='var(--gold)';this.style.color='var(--gold)'" onmouseout="if(window._CX_DECK_PATH!=='computex/deck2'){this.style.borderColor='var(--border2)';this.style.color='var(--muted)'}">
               <div style="font-family:var(--fh);font-size:20px;color:var(--gold);margin-bottom:4px">D2</div>
               DECK 2
             </button>
@@ -1062,7 +1065,7 @@ function initApp() {
       attempts++;
       if(window._FB_READY){
         banner.classList.add('fb-ok');
-        banner.innerHTML='⚡ Firebase connected — real-time sync active on <b>'+( (window._CX_DECK_PATH||'computex_deck1')==='computex_deck1'?'Deck 1':'Deck 2')+'</b>! <button onclick="document.getElementById(\'fb-banner\').classList.add(\'fb-hidden\')" style="margin-left:auto;background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.5);color:#fff;font-family:var(--fm);font-size:9px;padding:3px 10px;cursor:pointer;letter-spacing:1px">HIDE</button>';
+        banner.innerHTML='⚡ Firebase connected — real-time sync active on <b>'+( (window._CX_DECK_PATH||'computex/deck1')==='computex/deck1'?'Deck 1':'Deck 2')+'</b>! <button onclick="document.getElementById(\'fb-banner\').classList.add(\'fb-hidden\')" style="margin-left:auto;background:rgba(255,255,255,.25);border:1px solid rgba(255,255,255,.5);color:#fff;font-family:var(--fm);font-size:9px;padding:3px 10px;cursor:pointer;letter-spacing:1px">HIDE</button>';
       } else if(window._CX_FIREBASE_CONFIG && attempts < 30) {
         setTimeout(checkFb, 200);
       }
@@ -1721,11 +1724,11 @@ function initHomeEditor(){
   fields.forEach(([id,val])=>{ const el=document.getElementById(id); if(el) el.value=val; });
   const saved=localStorage.getItem('computex_apikey_store'); if(saved){ try{ renderApikeyChips(JSON.parse(saved)); }catch(e){} }
   // Highlight active deck buttons
-  const cur=window._CX_DECK_PATH||'computex_deck1';
+  const cur=window._CX_DECK_PATH||'computex/deck1';
   const lbl=document.getElementById('active-deck-label');
-  if(lbl) lbl.textContent='▶ ACTIVE: '+(cur==='computex_deck1'?'DECK 1':'DECK 2');
-  ['computex_deck1','computex_deck2'].forEach(d=>{
-    const idx=d==='computex_deck1'?1:2;
+  if(lbl) lbl.textContent='▶ ACTIVE: '+(cur==='computex/deck1'?'DECK 1':'DECK 2');
+  ['computex/deck1','computex/deck2'].forEach(d=>{
+    const idx=d==='computex/deck1'?1:2;
     const btn=document.getElementById('dev-deck'+idx+'-btn');
     if(btn&&d===cur){ btn.style.borderColor='var(--gold)'; btn.style.color='var(--gold)'; btn.style.background='rgba(0,229,255,.06)'; }
   });
@@ -1768,9 +1771,9 @@ function showDeckSwitcher(){
   const modal=document.getElementById('deck-modal');
   modal.style.display='flex';
   // highlight active deck
-  const cur=window._CX_DECK_PATH||'computex_deck1';
-  ['computex_deck1','computex_deck2'].forEach(d=>{
-    const idx=d==='computex_deck1'?1:2;
+  const cur=window._CX_DECK_PATH||'computex/deck1';
+  ['computex/deck1','computex/deck2'].forEach(d=>{
+    const idx=d==='computex/deck1'?1:2;
     const btn=document.getElementById('deck-btn-'+idx);
     if(btn){
       btn.style.borderColor=d===cur?'var(--gold)':'var(--border2)';
@@ -1794,8 +1797,8 @@ function selectDeck(deckPath){
 
 // On page load: update deck indicator text
 (function updateDeckIndicator(){
-  const cur=window._CX_DECK_PATH||'computex_deck1';
-  const label=cur==='computex_deck1'?'DECK 1 ▾':'DECK 2 ▾';
+  const cur=window._CX_DECK_PATH||'computex/deck1';
+  const label=cur==='computex/deck1'?'DECK 1 ▾':'DECK 2 ▾';
   const ind=document.getElementById('deck-indicator');
   if(ind){ ind.textContent=label; }
   // Also update sidebar present button subtitle
@@ -1807,10 +1810,10 @@ function selectDeck(deckPath){
 (function addTopbarDeckTag(){
   const right=document.querySelector('.tb-right');
   if(!right) return;
-  const cur=window._CX_DECK_PATH||'computex_deck1';
+  const cur=window._CX_DECK_PATH||'computex/deck1';
   const tag=document.createElement('div');
   tag.style.cssText='font-family:var(--fm);font-size:8px;letter-spacing:2px;color:var(--muted);padding:3px 8px;border:1px solid var(--border);cursor:pointer;transition:all .2s;user-select:none';
-  tag.textContent=cur==='computex_deck1'?'DECK 1':'DECK 2';
+  tag.textContent=cur==='computex/deck1'?'DECK 1':'DECK 2';
   tag.title='Switch Deck';
   tag.onmouseover=()=>{ tag.style.borderColor='var(--gold)'; tag.style.color='var(--gold)'; };
   tag.onmouseout=()=>{ tag.style.borderColor='var(--border)'; tag.style.color='var(--muted)'; };
