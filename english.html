@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Strange Food from Around the World — A Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500;1,9..144,600&family=Work+Sans:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1c1410;
+    --panel:#251a14;
+    --panel-2:#2c1f17;
+    --gold:#d6a13e;
+    --gold-soft:#e7c583;
+    --chili:#bc471c;
+    --herb:#7c8b4f;
+    --paper:#f1e6d3;
+    --paper-dim:#c9b89d;
+    --line: rgba(241,230,211,0.16);
+    --shadow: 0 18px 40px rgba(0,0,0,0.35);
+    --serif: 'Fraunces', serif;
+    --sans: 'Work Sans', sans-serif;
+    --mono: 'Space Mono', monospace;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html,body{
+    height:100%;
+    background:var(--ink);
+    color:var(--paper);
+    font-family:var(--sans);
+    overflow:hidden;
+  }
+  body{
+    background-image:
+      radial-gradient(ellipse at 15% 10%, rgba(214,161,62,0.08), transparent 45%),
+      radial-gradient(ellipse at 85% 90%, rgba(188,71,28,0.10), transparent 50%);
+  }
+  /* subtle paper grain */
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    pointer-events:none;
+    opacity:0.05;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    z-index:999;
+  }
+
+  #deck{
+    position:relative;
+    width:100vw; height:100vh;
+    display:flex;
+    transition: transform 720ms cubic-bezier(.65,0,.35,1);
+    will-change: transform;
+  }
+  .slide{
+    flex:0 0 100vw;
+    height:100vh;
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding: 7vh 8vw 11vh 8vw;
+    overflow:hidden;
+  }
+
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    color:var(--gold-soft);
+    display:flex;
+    align-items:center;
+    gap:10px;
+    opacity:0;
+  }
+  .eyebrow::before{
+    content:"";
+    width:26px; height:1px;
+    background:var(--gold-soft);
+    display:inline-block;
+  }
+
+  h1,h2,h3{ font-family:var(--serif); font-weight:600; }
+
+  /* ---------- reveal animation ---------- */
+  .reveal{ opacity:0; transform:translateY(22px); }
+  .slide.active .reveal{
+    animation: rise 760ms cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  .slide.active .eyebrow{
+    animation: rise 700ms cubic-bezier(.2,.8,.2,1) forwards;
+  }
+  @keyframes rise{
+    to{ opacity:1; transform:translateY(0); }
+  }
+  .d1{animation-delay:.05s!important;}
+  .d2{animation-delay:.15s!important;}
+  .d3{animation-delay:.25s!important;}
+  .d4{animation-delay:.35s!important;}
+  .d5{animation-delay:.45s!important;}
+  .d6{animation-delay:.55s!important;}
+
+  /* ---------- passport stamp ---------- */
+  .stamp{
+    width:118px; height:118px;
+    border-radius:50%;
+    border:3px double var(--gold);
+    display:flex; align-items:center; justify-content:center;
+    text-align:center;
+    transform:rotate(-9deg);
+    color:var(--gold-soft);
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    line-height:1.5;
+    flex-shrink:0;
+    position:relative;
+  }
+  .stamp span{ padding:0 10px; }
+  .stamp::after{
+    content:"";
+    position:absolute; inset:8px;
+    border:1px solid var(--gold);
+    border-radius:50%;
+    opacity:0.55;
+  }
+
+  /* ---------- nav ---------- */
+  #nav{
+    position:fixed; left:0; right:0; bottom:0;
+    height:9vh; min-height:64px;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 5vw;
+    z-index:50;
+    background:linear-gradient(0deg, rgba(28,20,16,0.92), rgba(28,20,16,0));
+  }
+  #progressTrack{
+    position:fixed; top:0; left:0; right:0; height:3px;
+    background:var(--line); z-index:60;
+  }
+  #progressFill{
+    height:100%; width:0%;
+    background:var(--gold);
+    transition:width 600ms ease;
+  }
+  .navBtn{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--paper);
+    width:44px; height:44px;
+    border-radius:50%;
+    cursor:pointer;
+    font-family:var(--serif);
+    font-size:18px;
+    display:flex; align-items:center; justify-content:center;
+    transition: all .25s ease;
+  }
+  .navBtn:hover{ border-color:var(--gold); color:var(--gold-soft); transform:scale(1.06); }
+  .navBtn:disabled{ opacity:0.25; cursor:default; }
+  .navBtn:disabled:hover{ transform:none; border-color:var(--line); color:var(--paper);}
+
+  #dots{ display:flex; gap:8px; }
+  .dot{
+    width:7px; height:7px; border-radius:50%;
+    background:var(--line);
+    cursor:pointer;
+    transition: all .25s ease;
+  }
+  .dot.on{ background:var(--gold); width:22px; border-radius:5px; }
+
+  #counter{
+    font-family:var(--mono); font-size:12px; color:var(--paper-dim);
+    letter-spacing:0.08em;
+  }
+
+  /* ---------- generic components ---------- */
+  .kicker-title{
+    font-size:clamp(34px,4.6vw,64px);
+    line-height:1.06;
+    margin-top:14px;
+    max-width:16ch;
+  }
+  .lede{
+    font-size:clamp(15px,1.2vw,18px);
+    color:var(--paper-dim);
+    max-width:56ch;
+    margin-top:16px;
+    line-height:1.6;
+    font-weight:300;
+  }
+
+  .card{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:4px;
+  }
+
+  .tag{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--ink);
+    background:var(--gold-soft);
+    padding:4px 10px;
+    border-radius:2px;
+    display:inline-block;
+  }
+
+  img.ph{
+    display:block;
+    width:100%; height:100%;
+    object-fit:cover;
+    background:linear-gradient(135deg, var(--panel-2), var(--panel));
+  }
+
+  /* =========================================================
+     SLIDE 0 — COVER
+     ========================================================= */
+  #s0{ padding:0; justify-content:flex-end; }
+  #s0 .bg{
+    position:absolute; inset:0;
+    background-size:cover; background-position:center 60%;
+  }
+  #s0 .bg::after{
+    content:"";
+    position:absolute; inset:0;
+    background:
+      linear-gradient(180deg, rgba(20,14,10,0.55) 0%, rgba(20,14,10,0.35) 35%, rgba(20,14,10,0.96) 92%),
+      linear-gradient(90deg, rgba(20,14,10,0.55), rgba(20,14,10,0.15) 45%);
+  }
+  #s0 .cover-content{
+    position:relative;
+    padding: 0 8vw 13vh 8vw;
+    max-width:900px;
+  }
+  #s0 .theme-line{
+    margin-top:22px;
+    font-family:var(--mono);
+    font-size:13px;
+    letter-spacing:0.08em;
+    color:var(--paper-dim);
+  }
+  #s0 .theme-line b{ color:var(--gold-soft); font-weight:400; }
+  #s0 .hint{
+    margin-top:38px;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--paper-dim);
+    display:flex; align-items:center; gap:10px;
+  }
+  #s0 .hint .arrow{ animation: bob 1.6s ease-in-out infinite; }
+  @keyframes bob{ 0%,100%{transform:translateX(0);} 50%{transform:translateX(6px);} }
+
+  /* =========================================================
+     SLIDE 1 — QUOTE
+     ========================================================= */
+  #s1{ align-items:center; text-align:center; }
+  #s1 .qmark{
+    font-family:var(--serif);
+    font-size:120px;
+    color:var(--gold);
+    opacity:0.5;
+    line-height:0.5;
+    height:70px;
+  }
+  #s1 blockquote{
+    font-family:var(--serif);
+    font-style:italic;
+    font-weight:500;
+    font-size:clamp(26px,3.6vw,46px);
+    line-height:1.35;
+    max-width:20ch;
+    margin:18px auto 0 auto;
+  }
+  #s1 .quote-rule{
+    width:60px; height:2px; background:var(--chili);
+    margin:34px auto 0 auto;
+  }
+
+  /* =========================================================
+     SLIDE 2 — CUISINE
+     ========================================================= */
+  #s2{ overflow-y:auto; }
+  .def-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+    margin-top:28px;
+    max-width:980px;
+  }
+  .def-card{ padding:26px 26px; }
+  .def-card h3{
+    font-size:15px; font-family:var(--mono); letter-spacing:0.1em;
+    text-transform:uppercase; margin-bottom:12px; font-weight:700;
+  }
+  .def-card.food h3{ color:var(--herb); }
+  .def-card.cuisine h3{ color:var(--chili); }
+  .def-card p{ font-size:15px; line-height:1.6; color:var(--paper); font-weight:300;}
+  .geo-line{
+    margin-top:20px;
+    max-width:980px;
+    padding:16px 22px;
+    border-left:3px solid var(--gold);
+    background:var(--panel);
+    font-family:var(--serif);
+    font-style:italic;
+    font-size:18px;
+  }
+  .facts-row{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:18px;
+    max-width:980px;
+    margin-top:26px;
+  }
+  .fact-card{ overflow:hidden; }
+  .fact-img{ height:150px; }
+  .fact-body{ padding:16px 18px; }
+  .fact-body .tag{ margin-bottom:8px; }
+  .fact-body p{ font-family:var(--serif); font-size:18px; }
+
+  /* =========================================================
+     SLIDE 3 — NEPAL FOOD RATING GRID
+     ========================================================= */
+  .grid4{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:16px;
+    margin-top:34px;
+    max-width:1180px;
+  }
+  .dish-card{ overflow:hidden; position:relative; }
+  .dish-img{ height:190px; position:relative; }
+  .dish-num{
+    position:absolute; top:10px; left:10px;
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--paper);
+    background:rgba(20,14,10,0.65);
+    padding:3px 9px;
+    border-radius:2px;
+    letter-spacing:0.05em;
+  }
+  .dish-body{ padding:14px 16px 18px 16px; }
+  .dish-body h4{ font-family:var(--serif); font-size:17px; font-weight:600; }
+  .dish-body p{ font-size:12.5px; color:var(--paper-dim); margin-top:6px; line-height:1.5; }
+
+  /* =========================================================
+     SLIDE 4 — PRE-LEARNING QUESTIONS
+     ========================================================= */
+  .qgrid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    max-width:1040px;
+    margin-top:30px;
+  }
+  .qcard{
+    padding:26px 26px 22px 26px;
+    position:relative;
+  }
+  .qcard .qletter{
+    font-family:var(--serif);
+    font-size:44px;
+    color:var(--gold);
+    line-height:1;
+    opacity:0.85;
+  }
+  .qcard p.qtext{
+    font-family:var(--serif);
+    font-style:italic;
+    font-size:19px;
+    line-height:1.5;
+    margin-top:10px;
+  }
+  .qcard textarea{
+    width:100%;
+    margin-top:16px;
+    background:var(--panel-2);
+    border:1px dashed var(--line);
+    border-radius:3px;
+    color:var(--paper);
+    font-family:var(--sans);
+    font-size:13px;
+    padding:10px 12px;
+    resize:none;
+    height:64px;
+  }
+  .qcard textarea:focus{ outline:none; border-color:var(--gold); }
+  .qcard textarea::placeholder{ color:var(--paper-dim); opacity:0.6; }
+
+  /* =========================================================
+     SLIDE 5 — NEPAL'S OWN STRANGE FOOD
+     ========================================================= */
+  .grid3{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:18px;
+    max-width:1180px;
+    margin-top:30px;
+  }
+  .nep-card{ overflow:hidden; }
+  .nep-img{ height:170px; }
+  .nep-body{ padding:16px 18px 20px 18px; }
+  .nep-body .native{ color:var(--gold-soft); font-family:var(--mono); font-size:12px; margin-left:8px;}
+  .nep-body h4{ font-family:var(--serif); font-size:19px; }
+  .nep-body p{ font-size:13px; color:var(--paper-dim); margin-top:8px; line-height:1.55; }
+
+  /* =========================================================
+     SLIDES 6-9 — STRANGE FOOD PROFILES
+     ========================================================= */
+  .profile{
+    display:grid;
+    grid-template-columns:0.85fr 1.15fr;
+    gap:60px;
+    align-items:center;
+    max-width:1180px;
+    width:100%;
+  }
+  .profile-media{
+    position:relative;
+    height:64vh;
+    border-radius:4px;
+    overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+  .profile-media img{ width:100%; height:100%; object-fit:cover; }
+  .profile-media .num{
+    position:absolute; bottom:14px; right:14px;
+    font-family:var(--mono); font-size:12px;
+    background:rgba(20,14,10,0.72);
+    padding:5px 11px; border-radius:2px;
+    letter-spacing:0.05em;
+  }
+  .profile-head{ display:flex; align-items:center; gap:18px; }
+  .profile-head .stamp{ width:92px; height:92px; font-size:10px; }
+  .profile-title h2{ font-size:clamp(30px,3.4vw,46px); line-height:1.05; }
+  .profile-title .country{ font-family:var(--mono); font-size:12px; color:var(--gold-soft); letter-spacing:0.08em; text-transform:uppercase; margin-top:6px;}
+
+  .profile-section{ margin-top:20px; }
+  .profile-section h5{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.1em;
+    text-transform:uppercase; color:var(--paper-dim); margin-bottom:6px;
+  }
+  .profile-section p{ font-size:14.5px; line-height:1.6; font-weight:300; max-width:56ch;}
+
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px;}
+  .chip{
+    font-family:var(--mono); font-size:11.5px;
+    border:1px solid var(--line); border-radius:20px;
+    padding:5px 12px; color:var(--paper-dim);
+  }
+
+  .strange-box{
+    margin-top:18px;
+    border-left:3px solid var(--chili);
+    background:rgba(188,71,28,0.08);
+    padding:12px 18px;
+  }
+  .strange-box h5{ color:var(--chili); }
+  .strange-box p{ font-size:14px; }
+
+  /* =========================================================
+     LAST SLIDE — LANGUAGE FOCUS
+     ========================================================= */
+  .lang-wrap{ max-width:980px; }
+  .connective-row{
+    display:flex; flex-wrap:wrap; gap:14px;
+    margin-top:26px;
+  }
+  .conn-chip{
+    font-family:var(--serif);
+    font-style:italic;
+    font-size:20px;
+    border:1px solid var(--gold);
+    color:var(--gold-soft);
+    padding:12px 22px;
+    border-radius:30px;
+    cursor:default;
+    transition: all .25s ease;
+  }
+  .conn-chip:hover{ background:var(--gold); color:var(--ink); }
+  .practice{
+    margin-top:34px;
+    max-width:640px;
+  }
+  .practice label{
+    font-family:var(--mono); font-size:11px; letter-spacing:0.08em;
+    text-transform:uppercase; color:var(--paper-dim); display:block; margin-bottom:8px;
+  }
+  .practice input{
+    width:100%;
+    background:transparent;
+    border:none; border-bottom:1px solid var(--line);
+    color:var(--paper);
+    font-family:var(--serif); font-style:italic; font-size:16px;
+    padding:8px 2px;
+  }
+  .practice input:focus{ outline:none; border-color:var(--gold); }
+  .conclusion{
+    margin-top:44px;
+    padding-top:26px;
+    border-top:1px solid var(--line);
+    max-width:760px;
+  }
+  .conclusion .tag{ background:var(--chili); color:var(--paper); margin-bottom:12px;}
+  .conclusion p{ font-family:var(--serif); font-size:19px; line-height:1.55; font-style:italic; color:var(--paper);}
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 980px){
+    .def-grid, .facts-row, .qgrid{ grid-template-columns:1fr; }
+    .grid4{ grid-template-columns:repeat(2,1fr); }
+    .grid3{ grid-template-columns:1fr; }
+    .profile{ grid-template-columns:1fr; gap:24px; }
+    .profile-media{ height:34vh; }
+    .slide{ padding:6vh 6vw 13vh 6vw; }
+    #s0 .cover-content{ padding:0 6vw 15vh 6vw; }
+  }
+</style>
+</head>
+<body>
+
+<div id="progressTrack"><div id="progressFill"></div></div>
+<div id="deck">
+
+  <!-- SLIDE 0 : COVER -->
+  <section class="slide" id="s0">
+    <div class="bg" style="background-image:url('https://commons.wikimedia.org/wiki/Special:FilePath/Colourful%20spices%20in%20Bangalore.jpg')"></div>
+    <div class="cover-content">
+      <div class="eyebrow reveal d1">A Field Guide</div>
+      <h1 class="kicker-title reveal d2" style="max-width:14ch;">Strange Food from Around the World</h1>
+      <div class="theme-line reveal d3">Theme: <b>Food and Cuisine</b></div>
+      <div class="hint reveal d4">Begin the tour <span class="arrow">→</span></div>
+    </div>
+  </section>
+
+  <!-- SLIDE 1 : QUOTE -->
+  <section class="slide" id="s1">
+    <div class="qmark reveal d1">&ldquo;</div>
+    <blockquote class="reveal d2">If you do not taste the unique flavors of the world, you leave the book of life half&#8209;unread.</blockquote>
+    <div class="quote-rule reveal d3"></div>
+  </section>
+
+  <!-- SLIDE 2 : WHAT IS CUISINE -->
+  <section class="slide" id="s2">
+    <div class="eyebrow reveal d1">Getting Our Bearings</div>
+    <h2 class="kicker-title reveal d2" style="font-size:clamp(28px,3.6vw,46px); max-width:20ch;">What is &ldquo;Cuisine&rdquo;?</h2>
+
+    <div class="def-grid reveal d3">
+      <div class="card def-card food">
+        <h3>Food</h3>
+        <p>The basic biological nourishment we eat to survive.</p>
+      </div>
+      <div class="card def-card cuisine">
+        <h3>Cuisine</h3>
+        <p>A specific set of cooking traditions, practices, ingredients, and spices associated with a distinct culture or geographic region.</p>
+      </div>
+    </div>
+
+    <div class="geo-line reveal d4">The Geography of Taste: Cuisine is shaped by what grows locally.</div>
+
+    <div class="facts-row reveal d5">
+      <div class="card fact-card">
+        <div class="fact-img"><img class="ph" src="https://commons.wikimedia.org/wiki/Special:FilePath/Black%20Peppercorns.jpg" alt="Black peppercorns"></div>
+        <div class="fact-body">
+          <span class="tag">Food Fact</span>
+          <p>The World's Most Traded Spice</p>
+        </div>
+      </div>
+      <div class="card fact-card">
+        <div class="fact-img"><img class="ph" src="https://commons.wikimedia.org/wiki/Special:FilePath/Vanilla%20beans.jpg" alt="Vanilla beans"></div>
+        <div class="fact-body">
+          <span class="tag">Food Fact</span>
+          <p>The Complexity of Vanilla</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 3 : NEPAL FOOD RATING -->
+  <section class="slide" id="s3">
+    <div class="eyebrow reveal d1">Close To Home</div>
+    <h2 class="kicker-title reveal d2" style="font-size:clamp(28px,3.6vw,46px); max-width:20ch;">Food Rating: 1&ndash;4</h2>
+    <div class="grid4 reveal d3">
+      <div class="card dish-card">
+        <div class="dish-img"><span class="dish-num">01</span><img class="ph" src="https://commons.wikimedia.org/wiki/Special:FilePath/Nepali%20dal-bhat-tarkari.jpg" alt="Dal Bhat Tarkari"></div>
+        <div class="dish-body"><h4>Dal Bhat Tarkari</h4><p>A traditional Dal Bhat Tarkari platter.</p></div>
+      </div>
+      <div class="card dish-card">
+        <div class="dish-img"><span class="dish-num">02</span><img class="ph" src="https://commons.wikimedia.org/wiki/Special:FilePath/Nepali%20Dhido.jpg" alt="Dhido"></div>
+        <div class="dish-body"><h4>Dhido</h4><p>A plate of Dhido with local side dishes.</p></div>
+      </div>
+      <div class="card dish-card">
+        <div class="dish-img"><span class="dish-num">03</span><img class="ph" src="https://commons.wikimedia.org/wiki/Special:FilePath/Sel%20Roti.jpg" alt="Selroti"></div>
+        <div class="dish-body"><h4>Selroti</h4><p>Golden, crispy, freshly fried Selroti.</p></div>
+      </div>
+      <div class="card dish-card">
+        <div class="dish-img"><span class="dish-num">04</span><img class="ph" src="https://commons.wikimedia.org/wiki/Special:FilePath/Nepali%20Momo.jpg" alt="Momos"></div>
+        <div class="dish-body"><h4>Momos</h4><p>A steaming plate of Momos.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 4 : PRE-LEARNING QUESTIONS -->
+  <section class="slide" id="s4">
+    <div class="eyebrow reveal d1">Before We Begin</div>
+    <h2 class="kicker-title reveal d2" style="font-size:clamp(28px,3.6vw,46px); max-width:22ch;">Pre-Learning Questions</h2>
+    <div class="qgrid reveal d3">
+      <div class="card qcard">
+        <div class="qletter">A</div>
+        <p class="qtext">What are the common food items in Nepal? Which one is your absolute favorite?</p>
+        <textarea placeholder="Jot down your thoughts here..."></textarea>
+      </div>
+      <div class="card qcard">
+        <div class="qletter">B</div>
+        <p class="qtext">Have you ever eaten any dish that is quite uncommon or unusual in Nepal? If yes, what was it, and how did it taste?</p>
+        <textarea placeholder="Jot down your thoughts here..."></textarea>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 5 : NEPAL'S OWN STRANGE FOOD -->
+  <section class="slide" id="s5">
+    <div class="eyebrow reveal d1">Homegrown &amp; Unusual</div>
+    <h2 class="kicker-title reveal d2" style="font-size:clamp(28px,3.6vw,46px); max-width:24ch;">Nepal Has Its Own Surprises</h2>
+    <div class="grid3 reveal d3">
+      <div class="card nep-card">
+        <div class="nep-img"><img class="ph" src="https://commons.wikimedia.org/wiki/Special:FilePath/Original%20Kinema-nepal.jpg" alt="Kinema"></div>
+        <div class="nep-body">
+          <h4>Kinema <span class="native">किनेमा</span></h4>
+          <p>A traditional heritage food from the eastern hilly regions, made by boiling and fermenting soybeans.</p>
+        </div>
+      </div>
+      <div class="card nep-card">
+        <div class="nep-img"><img class="ph" src="https://commons.wikimedia.org/wiki/Special:FilePath/Ghonghi.jpg" alt="Ghongi"></div>
+        <div class="nep-body">
+          <h4>Ghongi <span class="native">घोङ्गी</span></h4>
+          <p>A famous and beloved food item of the Tharu community in the Terai region.</p>
+        </div>
+      </div>
+      <div class="card nep-card">
+        <div class="nep-img"><img class="ph" src="https://commons.wikimedia.org/wiki/Special:FilePath/Chhurpi.jpg" alt="Chhurpi"></div>
+        <div class="nep-body">
+          <h4>Chhurpi <span class="native">छुर्पी</span> <span style="color:var(--paper-dim); font-size:13px;">(Durkha)</span></h4>
+          <p>A traditional hardened cheese made from Himalayan yak milk.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 6 : HAGGIS -->
+  <section class="slide" id="s6">
+    <div class="profile">
+      <div class="profile-media reveal d1">
+        <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Scotland%20Haggis.jpg" alt="Haggis">
+        <span class="num">Specimen No. 01</span>
+      </div>
+      <div>
+        <div class="profile-head reveal d2">
+          <div class="stamp"><span>Scotland</span></div>
+          <div class="profile-title">
+            <h2>Haggis</h2>
+            <div class="country">United Kingdom &middot; Scotland</div>
+          </div>
+        </div>
+        <div class="profile-section reveal d3">
+          <h5>Ingredients Used</h5>
+          <p>The heart, liver, and lungs of a sheep, mutton fat, oatmeal, and spices. It is traditionally served with "neeps and tats" (turnips and potatoes).</p>
+          <div class="chips">
+            <span class="chip">black pepper</span>
+            <span class="chip">allspice</span>
+            <span class="chip">nutmeg</span>
+            <span class="chip">mace</span>
+          </div>
+        </div>
+        <div class="profile-section reveal d4">
+          <h5>Preparation Procedure</h5>
+          <p>All the sheep parts are ground up and mixed together with the mutton fat, oatmeal, and spices. This mixture is then packed tightly inside a sheep's stomach and boiled for a few hours.</p>
+        </div>
+        <div class="strange-box reveal d5">
+          <h5>Reason for Strangeness</h5>
+          <p>It uses animal organs ("the parts of a sheep that no one else wants") and is cooked inside an actual animal stomach.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 7 : SHIOKARA -->
+  <section class="slide" id="s7">
+    <div class="profile">
+      <div class="profile-media reveal d1">
+        <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Shiokara%20001.jpg" alt="Shiokara">
+        <span class="num">Specimen No. 02</span>
+      </div>
+      <div>
+        <div class="profile-head reveal d2">
+          <div class="stamp"><span>Japan</span></div>
+          <div class="profile-title">
+            <h2>Shiokara</h2>
+            <div class="country">Japan</div>
+          </div>
+        </div>
+        <div class="profile-section reveal d3">
+          <h5>Ingredients Used</h5>
+          <p>Raw squid and salt.</p>
+        </div>
+        <div class="profile-section reveal d4">
+          <h5>Preparation Procedure</h5>
+          <p>Raw squid slices are mixed thoroughly with a salty, fermented paste made out of the squid's own belly/internal organs. The raw liver is taken out, mashed up, and mixed with a very large amount of salt. The mixture is sealed in a container for a few weeks to ferment. During this time, the natural enzymes in the liver break down the raw squid meat, turning it into a strong, salty, and pungent delicacy.</p>
+        </div>
+        <div class="strange-box reveal d5">
+          <h5>Reason for Strangeness</h5>
+          <p>It consists of completely raw seafood mixed into a heavily salted, fermented animal stomach lining, which gives it an intense, challenging flavor that even some locals take time to get used to.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 8 : JELLYFISH SALAD -->
+  <section class="slide" id="s8">
+    <div class="profile">
+      <div class="profile-media reveal d1">
+        <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Jellyfish%20sesame%20oil%20and%20chili%20sauce.jpg" alt="Jellyfish Salad">
+        <span class="num">Specimen No. 03</span>
+      </div>
+      <div>
+        <div class="profile-head reveal d2">
+          <div class="stamp"><span>China</span></div>
+          <div class="profile-title">
+            <h2>Jellyfish Salad</h2>
+            <div class="country">China</div>
+          </div>
+        </div>
+        <div class="profile-section reveal d3">
+          <h5>Ingredients Used</h5>
+          <p>Jellyfish, chicken, and sesame oil.</p>
+        </div>
+        <div class="profile-section reveal d4">
+          <h5>Preparation Procedure</h5>
+          <p>The jellyfish is sliced into a rubbery, stringy texture, mixed into fresh salads, paired up with shredded chicken, and stirred completely through with rich sesame oil. It is traditionally seasoned with garlic, soy sauce, and a pinch of sugar or chili flakes to balance the taste.</p>
+        </div>
+        <div class="strange-box reveal d5">
+          <h5>Reason for Strangeness</h5>
+          <p>People usually associate jellyfish with their scary, stinging nature in the ocean rather than seeing them as a low-fat, rubbery salad ingredient.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 9 : GREEN ANTS -->
+  <section class="slide" id="s9">
+    <div class="profile">
+      <div class="profile-media reveal d1">
+        <img src="https://commons.wikimedia.org/wiki/Special:FilePath/Oecophylla_smaragdina-.jpg" alt="Green Ants">
+        <span class="num">Specimen No. 04</span>
+      </div>
+      <div>
+        <div class="profile-head reveal d2">
+          <div class="stamp"><span>Australia</span></div>
+          <div class="profile-title">
+            <h2>Green Ants</h2>
+            <div class="country">Australia</div>
+          </div>
+        </div>
+        <div class="profile-section reveal d3">
+          <h5>Ingredients</h5>
+          <p>Whole green ants, often paired with goat's cheese and a native herb called lemon myrtle.</p>
+        </div>
+        <div class="profile-section reveal d4">
+          <h5>Preparation</h5>
+          <p>These little insects are pulled straight from tree branches, lightly crushed between the hands, and eaten raw.</p>
+        </div>
+        <div class="strange-box reveal d5">
+          <h5>Strangeness</h5>
+          <p>Eating whole insects is a massive psychological challenge for many, yet they surprise consumers by naturally tasting remarkably lemony and peppery without any added spices!</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SLIDE 10 : LANGUAGE FOCUS -->
+  <section class="slide" id="s10">
+    <div class="eyebrow reveal d1">Wrapping Up</div>
+    <h2 class="kicker-title reveal d2" style="font-size:clamp(28px,3.6vw,46px); max-width:20ch;">Language Focus: Connectives</h2>
+    <div class="lang-wrap">
+      <div class="connective-row reveal d3">
+        <span class="conn-chip">oddly enough</span>
+        <span class="conn-chip">and</span>
+        <span class="conn-chip">however</span>
+        <span class="conn-chip">but</span>
+      </div>
+      <div class="practice reveal d4">
+        <label>Try using one in a sentence</label>
+        <input type="text" placeholder="e.g. Shiokara is salty, but I would still like to try it.">
+      </div>
+      <div class="conclusion reveal d5">
+        <span class="tag">Conclusion</span>
+        <p>From Dal Bhat in Nepal to Haggis in Scotland, every "strange" food is simply someone else's everyday cuisine — shaped by geography, history, and taste. Thanks for joining this tour of the world's table.</p>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<div id="nav">
+  <button class="navBtn" id="prevBtn" aria-label="Previous slide">&#8592;</button>
+  <div id="dots"></div>
+  <div id="counter">01 / 11</div>
+  <button class="navBtn" id="nextBtn" aria-label="Next slide">&#8594;</button>
+</div>
+
+<script>
+  const deck = document.getElementById('deck');
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const total = slides.length;
+  let current = 0;
+
+  const dotsWrap = document.getElementById('dots');
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' on' : '');
+    d.addEventListener('click', () => goTo(i));
+    dotsWrap.appendChild(d);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const counter = document.getElementById('counter');
+  const progressFill = document.getElementById('progressFill');
+
+  function pad(n){ return n < 10 ? '0' + n : '' + n; }
+
+  function render(){
+    deck.style.transform = `translateX(-${current * 100}vw)`;
+    slides.forEach((s, i) => s.classList.toggle('active', i === current));
+    dots.forEach((d, i) => d.classList.toggle('on', i === current));
+    counter.textContent = `${pad(current + 1)} / ${pad(total - 1)}`;
+    progressFill.style.width = (current / (total - 1) * 100) + '%';
+    prevBtn.disabled = current === 0;
+    nextBtn.disabled = current === total - 1;
+  }
+
+  function goTo(i){
+    current = Math.max(0, Math.min(total - 1, i));
+    render();
+  }
+
+  prevBtn.addEventListener('click', () => goTo(current - 1));
+  nextBtn.addEventListener('click', () => goTo(current + 1));
+
+  window.addEventListener('keydown', (e) => {
+    if (['ArrowRight','PageDown',' '].includes(e.key)) { e.preventDefault(); goTo(current + 1); }
+    if (['ArrowLeft','PageUp'].includes(e.key)) { e.preventDefault(); goTo(current - 1); }
+  });
+
+  // touch swipe
+  let touchX = null;
+  window.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; });
+  window.addEventListener('touchend', (e) => {
+    if (touchX === null) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) { dx < 0 ? goTo(current + 1) : goTo(current - 1); }
+    touchX = null;
+  });
+
+  document.querySelector('#s0 .hint').addEventListener('click', () => goTo(1));
+
+  render();
+</script>
+</body>
+</html>
